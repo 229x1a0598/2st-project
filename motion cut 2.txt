@@ -1,0 +1,127 @@
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Scanner;
+
+public class URLShortener {
+    private Map<String, String> urlMapping;  // Map to store mapping between short and long URLs
+
+    public URLShortener() {
+        this.urlMapping = new HashMap<>();
+    }
+
+    public String shortenURL(String longURL) {
+        if (!isValidURL(longURL)) {
+            throw new IllegalArgumentException("Invalid long URL");
+        }
+
+        if (urlMapping.containsValue(longURL)) {
+            // If the long URL already exists, return the existing short URL
+            return getShortURLByLongURL(longURL);
+        } else {
+            // Generate a new short URL using a basic hash function
+            String shortURL = generateShortURL(longURL);
+            urlMapping.put(shortURL, longURL);
+            return shortURL;
+        }
+    }
+
+    public String expandURL(String shortURL) {
+        if (!isValidShortURL(shortURL)) {
+            throw new IllegalArgumentException("Invalid short URL");
+        }
+
+        if (urlMapping.containsKey(shortURL)) {
+            return urlMapping.get(shortURL);
+        } else {
+            throw new IllegalArgumentException("Short URL not found");
+        }
+    }
+
+    private String generateShortURL(String longURL) {
+        // Basic hash function using SHA-256 for simplicity
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = md.digest(longURL.getBytes());
+
+            // Convert the byte array to a hex string
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                hexString.append(String.format("%02x", b));
+            }
+
+            // Take the first 8 characters as the short URL
+            return hexString.toString().substring(0, 8);
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Hashing algorithm not found");
+        }
+    }
+
+    private String getShortURLByLongURL(String longURL) {
+        // Get the existing short URL for a given long URL
+        return urlMapping.entrySet()
+                .stream()
+                .filter(entry -> entry.getValue().equals(longURL))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Short URL not found"))
+                .getKey();
+    }
+
+    private boolean isValidURL(String url) {
+        // Simple URL validation for demonstration purposes
+        return url.startsWith("http://") || url.startsWith("https://");
+    }
+
+    private boolean isValidShortURL(String shortURL) {
+        // Simple short URL validation for demonstration purposes
+        return shortURL.length() == 8 && shortURL.matches("[a-fA-F0-9]+");
+    }
+
+    public static void main(String[] args) {
+        URLShortener urlShortener = new URLShortener();
+        Scanner scanner = new Scanner(System.in);
+
+        while (true) {
+            System.out.println("Choose an option:");
+            System.out.println("1. Shorten URL");
+            System.out.println("2. Expand URL");
+            System.out.println("3. Exit");
+
+            int choice = scanner.nextInt();
+            scanner.nextLine();  // Consume the newline character
+
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter the long URL to shorten: ");
+                    String longURL = scanner.nextLine();
+                    try {
+                        String shortURL = urlShortener.shortenURL(longURL);
+                        System.out.println("Shortened URL: " + shortURL);
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Error: " + e.getMessage());
+                    }
+                    break;
+
+                case 2:
+                    System.out.print("Enter the short URL to expand: ");
+                    String shortURL = scanner.nextLine();
+                    try {
+                        String expandedURL = urlShortener.expandURL(shortURL);
+                        System.out.println("Expanded URL: " + expandedURL);
+                    } catch (IllegalArgumentException e) {
+                        System.err.println("Error: " + e.getMessage());
+                    }
+                    break;
+
+                case 3:
+                    System.out.println("Exiting...");
+                    scanner.close();
+                    System.exit(0);
+
+                default:
+                    System.out.println("Invalid option. Please choose again.");
+            }
+        }
+    }
+}
